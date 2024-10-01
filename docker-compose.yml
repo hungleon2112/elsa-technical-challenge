@@ -1,0 +1,113 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo
+    ports:
+      - '27017:27017'
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:15672"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+    environment:
+      RABBITMQ_DEFAULT_USER: guest  # Set default user
+      RABBITMQ_DEFAULT_PASS: guest  # Set default password
+
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - '3001:3001'
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/userdb
+      JWT_SECRET: BT2eX2HJ3c71FNJ1HGbCWoH37rwU6LxLTwRhU4A60oPCeX16dhycIyqH3bWac2T7
+      FRONTEND_URL: http://frontend:3005
+      REALTIME_SERVICE_URL: http://real-time-service:3004
+    env_file:
+      - ./user-service/.env
+    depends_on:
+      - mongo
+
+  quiz-service:
+    build:
+      context: ./quiz-service
+    ports:
+      - '3002:3002'
+    restart: on-failure
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/quizdb
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      FRONTEND_URL: http://frontend:3005
+      REALTIME_SERVICE_URL: http://real-time-service:3004
+      JWT_SECRET: BT2eX2HJ3c71FNJ1HGbCWoH37rwU6LxLTwRhU4A60oPCeX16dhycIyqH3bWac2T7
+    env_file:
+      - ./quiz-service/.env
+    depends_on:
+      - mongo
+      - rabbitmq 
+
+  score-service:
+    build:
+      context: ./score-service
+    ports:
+      - '3003:3003'
+    restart: on-failure
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/quizdb
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      FRONTEND_URL: http://frontend:3005
+      REALTIME_SERVICE_URL: http://real-time-service:3004
+    env_file:
+      - ./score-service/.env
+    depends_on:
+      - mongo
+      - rabbitmq 
+
+  real-time-service:
+    build:
+      context: ./real-time-service
+    ports:
+      - '3004:3004'
+    environment:
+      FRONTEND_URL: http://frontend:3005
+      QUIZ_SERVICE_URL: http://quiz-service:3002
+      SCORE_SERVICE_URL: http://score-service:3003
+      USER_SERVICE_URL: http://user-service:3001
+    env_file:
+      - ./real-time-service/.env
+    depends_on:
+      - user-service
+      - quiz-service
+      - score-service
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - '3005:3005' 
+    environment:
+      REACT_APP_QUIZ_SERVICE_URL: http://localhost:3002
+      REACT_APP_SCORE_SERVICE_URL: http://localhost:3003
+      REACT_APP_USER_SERVICE_URL: http://localhost:3001
+      REACT_APP_REALTIME_SERVICE_URL: http://localhost:3004
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - user-service
+      - quiz-service
+      - score-service
+      - real-time-service
+ 
+  seeder:
+    build:
+      context: ./quiz-service
+    command: ["npm", "run", "seeder"]
+    depends_on:
+      - mongo
+      - quiz-service

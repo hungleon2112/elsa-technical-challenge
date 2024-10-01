@@ -1,0 +1,25 @@
+{
+  "name": "real-time-service",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node-dev src/index.ts"
+  },
+  "dependencies": {
+    "amqplib": "^0.8.0",
+    "axios": "^1.7.7",
+    "dotenv": "^10.0.0",
+    "express": "^4.21.0",
+    "http": "^0.0.1-security",
+    "socket.io": "^4.0.0",
+    "typescript": "^4.4.4"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "@types/express": "^5.0.0",
+    "@types/socket.io": "^3.0.0",
+    "ts-node": "^10.0.0",
+    "ts-node-dev": "^1.1.8"
+  }
+}
